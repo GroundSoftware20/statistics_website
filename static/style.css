@@ -1,0 +1,12 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  text-align: center;
+}
+#rotator {
+  font-size: 2em;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.5s ease;
+}
