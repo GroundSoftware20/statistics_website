@@ -1,6 +1,117 @@
+class CommentGroup {
+  static totalnumScores = 0;
+  constructor(data) {
+    this.data = data
+    console.log(CommentGroup.totalnumScores);
+    console.log(data);
+    this.texts = [];
+    for(var i = 0; i < data.length; i++) {
+  
+      this.texts.push(data[i]["comment"]);
+    }
+  
+    this.currentIndex = 0;
+    this.intervalId = true;
+
+    let clone = document.getElementById('comment-template').content.cloneNode(true);
+    this.wrapper = document.createElement('div');
+    this.wrapper.appendChild(clone);
+
+    this.rotatorElement = this.wrapper.querySelector('.rotator');
+    this.intervalId = setInterval(() => this.changeText(), 3000);
+    document.getElementById('container').appendChild(this.wrapper);
+    
+    this.pieChart = this.wrapper.querySelector('.pie-chart');
+    this.createPieChart();
+
+    // Stop the rotation when clicked and let the user take control
+    this.rotatorElement.addEventListener('click', () => this.handleRotatorClick());
+    this.wrapper.querySelector('.pie-chart-container').addEventListener('click', () => this.handleRotatorClick());
+  }
+
+  handleRotatorClick() {
+
+    if(this.intervalId) {
+      clearInterval(this.intervalId); // Stop the auto rotation
+      this.intervalId = false;
+    }
+    this.changeText(); // Manually change text when clicked
+  }
+
+  // Function to change the text
+  changeText() {
+    
+    this.currentIndex = (this.currentIndex + 1) % this.texts.length;
+    this.rotatorElement.textContent = this.texts[this.currentIndex];
+
+    //update pie chart
+    this.pieChart.data.datasets[0].data = [this.data[this.currentIndex]["tally"], CommentGroup.totalnumScores - this.data[this.currentIndex]["tally"]]
+    this.pieChart.update();
+  }
+
+   createPieChart() {
+    const ctx = this.pieChart.getContext('2d');
+    this.pieChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: ["Mentioned", "Not Mentioned"],
+        datasets: [{
+          label: 'Pie chart',
+          data: [this.data[this.currentIndex]["tally"], CommentGroup.totalnumScores - this.data[this.currentIndex]["tally"]],
+          backgroundColor: [
+            'rgba(23, 228, 64, 0.6)',
+            'rgba(128, 128, 128, 0.6)'
+          ],
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        plugins: {
+          datalabels: {
+            color: '#000',
+            display: (ctx) => {
+              // Show label only for 'Bananas'
+              return ctx.chart.data.labels[ctx.dataIndex] === 'Mentioned';
+            },
+            formatter: (value) => value + "/" + CommentGroup.totalnumScores.toString(),
+            font: {
+              weight: 'bold',
+              size: 30
+            }
+          },
+          tooltip: {
+            enabled: false
+          }
+        },
+        responsive: true,
+        animation: {
+          animateScale: true
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+  }
+}
 class QuestionGroup {
 
-  constructor(name, data) {
+  constructor() {
+
+    //create an empty instance of the html template
+    const template = document.getElementById('question-group-template');
+    let clone = template.content.cloneNode(true);
+    this.wrapper = document.createElement('div');
+    this.wrapper.appendChild(clone);
+    document.getElementById('container').appendChild(this.wrapper);
+  }
+
+  updateQuestionGroup(name, data) {
+
+    this.fillInData(name, data);
+    this.populateHtmlElement();
+  }
+
+  fillInData(name, data) {
 
     this.name = name;
     this.database = data;
@@ -10,32 +121,35 @@ class QuestionGroup {
 
     for(let key in data) {
       this.questionList.push(key);
-      this.scoreTotals["1"] += data[key]["1"];
-      this.scoreTotals["2"] += data[key]["2"];
-      this.scoreTotals["3"] += data[key]["3"];
-      this.scoreTotals["4"] += data[key]["4"];
-      this.scoreTotals["5"] += data[key]["5"];
+      for(let i = 1; i <= 5; i++) {
+        let iString = i.toString();
+        this.scoreTotals[iString] += data[key][iString];
+        this.numScores += data[key][iString];
+      }
+
+      //Very much a bootleg way of getting this number, but still preferable to hardcoding
+      if(CommentGroup.totalnumScores == 0) {
+        CommentGroup.totalnumScores = this.numScores;
+      }
     }
-    this.numScores = this.scoreTotals["1"]+this.scoreTotals["2"]+this.scoreTotals["3"]+this.scoreTotals["4"]+this.scoreTotals["5"];
-    const template = document.getElementById('question-group-template');
+  }
 
-    this.displayObject = template.content.cloneNode(true);
-    this.displayObject.querySelector('.title').textContent = this.name;
+  populateHtmlElement() {
+
+    this.wrapper.querySelector('.title').textContent = this.name;
     
-    this.displayRotatorObject = this.displayObject.querySelector('.text-rotator');
+
+    this.displayRotatorObject = this.wrapper.querySelector('.text-rotator');
     this.displayRotatorObject.textContent = this.questionList[0];
+
     this.index = 0;
-    setInterval(() => this.rotateText(), 5000);
+    setInterval(() => this.rotateQuestionListText(), 5000);
+    this.rotateQuestionListText();
 
-    this.pieChart = this.displayObject.querySelector('.pie-chart');
 
+    this.pieChart = this.wrapper.querySelector('.pie-chart');
+    this.createPieChart();
 
-    document.getElementById('container').appendChild(this.displayObject);
-
-    this.determineAgreeNums();
-    this.createPieChart();    
-
-    this.rotateText();
   }
 
   determineAgreeNums() {
@@ -63,7 +177,7 @@ class QuestionGroup {
     }
   }
 
-  rotateText() {
+  rotateQuestionListText() {
     // Fade out
     this.displayRotatorObject.style.opacity = 0;
   
@@ -79,6 +193,8 @@ class QuestionGroup {
   }
 
   createPieChart() {
+    
+    this.determineAgreeNums();
 
     const ctx = this.pieChart.getContext('2d');
     const pieChart = new Chart(ctx, {
@@ -108,19 +224,6 @@ class QuestionGroup {
     return pieChart;
   }
 }
-
-//const ctx = document.getElementById('myPieChart').getContext('2d');
-
-//const myPieChart = createPieChart(80, 15,5, "myPieChart")
-
-//const rotator = document.getElementById('text-rotator');
-const messages = [
-  "My therapist seemed warm, supportive, and concerned",
-  "My therapist seemed trustworthy",
-  "My therapist treated me with respect",
-  "My therapist did a good job listening",
-  "My therapist understood how I felt inside"
-];
 
 function processExcelData(excelData) {
   console.log(excelData);
@@ -212,18 +315,15 @@ function processExcelData(excelData) {
   return toReturn;
 }
 
-questionGroupReferences = [{},{},{},{},{},{},{}]
-
 async function createQuestionGroups(data) {
 
   var i = 0
   for (const [key, value] of Object.entries(data)) {
     if(key === "Comments") {
-      questionGroupReferences[i] = createCommentSection(data[key]["What did you like the best about the sessions/ process?"]);
+      questionGroupReferences[i] = new CommentGroup(data[key]["What did you like the best about the sessions/ process?"]);
     }
     else {
-      
-      questionGroupReferences[i] =  new QuestionGroup(key, value, "placeholder");
+      questionGroupReferences[i].updateQuestionGroup(key, value);
       i++;
     }
   }
@@ -249,101 +349,67 @@ async function getDataFromBackend() {
                 });
 }
 
-getDataFromBackend();
+function addExcelUploadEventListener() {
+  //used to manually enter info
+  document.getElementById('excel-file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
 
-let currentIndex = 0;
-let intervalId = true;
-var commentElement;
-var rotatorElement;
-var texts = []
-// List of texts to rotate through
-function createCommentSection(data) {
-  console.log(data);
-  texts = [];
-  for(var i = 0; i < data.length; i++) {
+    reader.onload = function(event) {
+      const data = new Uint8Array(event.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
 
-    texts.push(data[i]["comment"]);
-  }
-  console.log("texts");
-  console.log(texts);
+      // Read first sheet
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
 
-  commentElement = document.getElementById('comment-template').content.cloneNode(true);
-  rotatorElement = commentElement.querySelector('.rotator');
-  document.getElementById('container').appendChild(commentElement);
+      // Convert sheet to JSON
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }); // header: 1 for array of arrays
 
-  // Stop the rotation when clicked and let the user take control
-  rotatorElement.addEventListener('click', function() {
-    if (intervalId) {
-        clearInterval(intervalId); // Stop the auto rotation
-        intervalId = false;
-    }
-    changeText(); // Manually change text when clicked
+      convertedJson = [];
+      
+      json.forEach(line => {
+        toAdd = {};
+
+        toAdd[1] = line[3] === undefined ? "": line[3];
+        toAdd[2] = line[4] === undefined ? "": line[4];
+        toAdd[3] = line[5] === undefined ? "": line[5];
+        toAdd[4] = line[6] === undefined ? "": line[6];
+        toAdd[5] = line[7] === undefined ? "": line[7];
+        toAdd[ ' '] = line[1] === undefined ? "": line[1];
+        toAdd["N/A"] = line[2] === undefined ? "": line[2];
+        toAdd["Unnamed: 0"] = line[0] === undefined ? "": line[0];
+
+        convertedJson.push(toAdd);
+      });
+      convertedJson.shift();
+      
+
+      lastElement = convertedJson[convertedJson.length - 1];
+      
+      while(lastElement[" "] === "" && lastElement[1] === "" && lastElement[2] === "" && lastElement[3] === "" &&
+            lastElement[4] === "" && lastElement[5] === "" && lastElement["N/A"] === "" && lastElement["Unnamed: 0"] === "") {
+        convertedJson.pop()
+        lastElement = convertedJson[convertedJson.length - 1];
+      }
+
+      console.log(convertedJson);
+      createQuestionGroups(processExcelData(convertedJson));
+    };
+    reader.readAsArrayBuffer(file);
   });
 }
 
-// Function to change the text
-function changeText() {
-    console.log("change!");
-    currentIndex = (currentIndex + 1) % texts.length;
-    rotatorElement.textContent = texts[currentIndex];
+function main() {
+
+  addExcelUploadEventListener();
+  getDataFromBackend();
+
+  for(let i = 0; i < 6; i++) {
+    let k = new QuestionGroup();
+    questionGroupReferences.push(k);
+  }
 }
 
-// Start automatic rotation
-function startRotation() {
-    
-    intervalId = setInterval(changeText, 3000);
-}
-
-
-
-//used to manually enter info
-document.getElementById('excel-file').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  const reader = new FileReader();
-
-  reader.onload = function(event) {
-    const data = new Uint8Array(event.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-
-    // Read first sheet
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-
-    // Convert sheet to JSON
-    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }); // header: 1 for array of arrays
-
-    convertedJson = [];
-    
-    json.forEach(line => {
-      toAdd = {};
-
-      toAdd[1] = line[3] === undefined ? "": line[3];
-      toAdd[2] = line[4] === undefined ? "": line[4];
-      toAdd[3] = line[5] === undefined ? "": line[5];
-      toAdd[4] = line[6] === undefined ? "": line[6];
-      toAdd[5] = line[7] === undefined ? "": line[7];
-      toAdd[ ' '] = line[1] === undefined ? "": line[1];
-      toAdd["N/A"] = line[2] === undefined ? "": line[2];
-      toAdd["Unnamed: 0"] = line[0] === undefined ? "": line[0];
-
-      convertedJson.push(toAdd);
-    });
-    convertedJson.shift();
-    
-
-    lastElement = convertedJson[convertedJson.length - 1];
-    
-    while(lastElement[" "] === "" && lastElement[1] === "" && lastElement[2] === "" && lastElement[3] === "" &&
-          lastElement[4] === "" && lastElement[5] === "" && lastElement["N/A"] === "" && lastElement["Unnamed: 0"] === "") {
-      convertedJson.pop()
-      lastElement = convertedJson[convertedJson.length - 1];
-    }
-
-    console.log(convertedJson);
-    createQuestionGroups(processExcelData(convertedJson));
-  };
-  reader.readAsArrayBuffer(file);
-});
-
-// Start the rotation on page load
-startRotation();
+questionGroupReferences = []
+main();
