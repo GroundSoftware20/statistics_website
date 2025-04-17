@@ -1,4 +1,4 @@
-The website demo can be found at <insert URL here>.
+The website demo can be found at [<insert URL here>](https://groundsoftware20.github.io/statistics_website/).
 
 In order to view the changes, you will need a copy of the input_data excel file, which is not included as the data is sensitive.
 The visual regarding comments (at the very bottom) has a feature where clicking on it will change the progression from being automatic to manual
