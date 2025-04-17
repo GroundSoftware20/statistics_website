@@ -1,4 +1,5 @@
 The website demo can be found at (https://groundsoftware20.github.io/statistics_website/).
+Note that the index.html file in the root folder is just there in order to allow Github to display the website; the application is intended to be served with python using `python statistics_app_server.py`
 
 In order to view the changes, you will need a copy of the input_data excel file, which is not included as the data is sensitive.
 The visual regarding comments (at the very bottom) has a feature where clicking on it will change the progression from being automatic to manual
